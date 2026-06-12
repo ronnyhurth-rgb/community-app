@@ -9,32 +9,29 @@ export default function App() {
   const fetchData = async (user) => {
     try {
       setLoading(true);
-      
-      // 1. Profil abrufen
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      setProfile(profileData);
 
-      // 2. Alle User abrufen
-      const { data: usersData, error: usersError } = await supabase
+      // Wir laden ALLE Profile, ohne Filter, um RLS-Fehler beim .eq() zu vermeiden
+      const { data, error } = await supabase
         .from('profiles')
         .select('*');
 
-      if (usersError) throw usersError;
-      setAllUsers(usersData || []);
+      if (error) throw error;
+
+      setAllUsers(data || []);
       
+      // Suche das eigene Profil in der geladenen Liste
+      const myProfile = data?.find((p) => p.id === user.id);
+      setProfile(myProfile || null);
+
     } catch (err) {
-      console.error("Fehler:", err.message);
+      console.error("Daten-Fehler:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Initialen Session-Check
+    // Session prüfen
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         fetchData(session.user);
@@ -43,7 +40,7 @@ export default function App() {
       }
     });
 
-    // Listener für Login/Logout
+    // Auth-Listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
         fetchData(session.user);
@@ -61,6 +58,8 @@ export default function App() {
 
   return (
     <div style={{ maxWidth: '400px', margin: '20px auto', fontFamily: 'sans-serif' }}>
+      <h1>Community</h1>
+      
       {!profile ? (
         <button onClick={() => supabase.auth.signInWithOAuth({ 
           provider: 'google',
@@ -70,23 +69,14 @@ export default function App() {
         </button>
       ) : (
         <div>
-         
-  <h1>Community</h1>
-  <p>Debug: {allUsers.length} User gefunden.</p>
-  <pre>{JSON.stringify(allUsers, null, 2)}</pre>
-
-          <p>Eingeloggt als: {profile.username || "User"}</p>
+          <p>Eingeloggt als: <strong>{profile.username || "User"}</strong></p>
           <hr />
-          <h3>Alle registrierten Profile:</h3>
-          {allUsers.length > 0 ? (
-            <ul>
-              {allUsers.map(u => (
-                <li key={u.id}>{u.username || "Kein Name definiert"}</li>
-              ))}
-            </ul>
-          ) : (
-            <p>Noch keine Profile in der Datenbank gefunden.</p>
-          )}
+          <h3>Alle registrierten Profile ({allUsers.length}):</h3>
+          <ul>
+            {allUsers.map((u) => (
+              <li key={u.id}>{u.username || "Kein Name definiert"}</li>
+            ))}
+          </ul>
           <button onClick={() => supabase.auth.signOut()}>Logout</button>
         </div>
       )}
