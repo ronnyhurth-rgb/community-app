@@ -8,4 +8,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-redirectTo: 'https://community-app-34hzhimmf-ronnyhurth-7948s-projects.vercel.app/'
+redirectTo: 'https://community-cnkfmzqmg-ronnyhurth-7948s-projects.vercel.app'
