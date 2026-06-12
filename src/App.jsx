@@ -5,50 +5,52 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [allUsers, setAllUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [debug, setDebug] = useState("Starte App...");
 
-  const fetchData = async (user) => {
+  const fetchData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
+      // 1. Session prüfen
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) throw sessionError;
+      if (!session) {
+        setDebug("Kein User eingeloggt.");
+        setLoading(false);
+        return;
+      }
 
-      // Wir laden ALLE Profile, ohne Filter, um RLS-Fehler beim .eq() zu vermeiden
+      setDebug(`Eingeloggt mit ID: ${session.user.id}`);
+
+      // 2. Alle Profile laden
       const { data, error } = await supabase
         .from('profiles')
         .select('*');
 
-      if (error) throw error;
+      if (error) {
+        setDebug(`DB-Fehler: ${error.message}`);
+        throw error;
+      }
 
+      console.log("Daten aus DB:", data);
       setAllUsers(data || []);
       
-      // Suche das eigene Profil in der geladenen Liste
-      const myProfile = data?.find((p) => p.id === user.id);
+      const myProfile = data?.find(p => p.id === session.user.id);
       setProfile(myProfile || null);
+      setDebug(`Erfolg: ${data.length} User gefunden.`);
 
     } catch (err) {
-      console.error("Daten-Fehler:", err.message);
+      console.error("Fehler beim Laden:", err);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Session prüfen
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        fetchData(session.user);
-      } else {
-        setLoading(false);
-      }
-    });
+    fetchData();
 
-    // Auth-Listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
-        fetchData(session.user);
-      } else {
-        setProfile(null);
-        setAllUsers([]);
-        setLoading(false);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+      fetchData();
     });
 
     return () => subscription.unsubscribe();
@@ -57,9 +59,12 @@ export default function App() {
   if (loading) return <div>Lade Daten...</div>;
 
   return (
-    <div style={{ maxWidth: '400px', margin: '20px auto', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h1>Community</h1>
-      
+      <div style={{ background: '#f0f0f0', padding: '10px', marginBottom: '10px' }}>
+        <strong>Status:</strong> {debug}
+      </div>
+
       {!profile ? (
         <button onClick={() => supabase.auth.signInWithOAuth({ 
           provider: 'google',
@@ -69,12 +74,11 @@ export default function App() {
         </button>
       ) : (
         <div>
-          <p>Eingeloggt als: <strong>{profile.username || "User"}</strong></p>
-          <hr />
-          <h3>Alle registrierten Profile ({allUsers.length}):</h3>
+          <p>Eingeloggt als: {profile.username || "User ohne Name"}</p>
+          <h3>Alle Profile ({allUsers.length}):</h3>
           <ul>
-            {allUsers.map((u) => (
-              <li key={u.id}>{u.username || "Kein Name definiert"}</li>
+            {allUsers.map(u => (
+              <li key={u.id}>{u.username || "Kein Name"} (ID: {u.id.substring(0,8)}...)</li>
             ))}
           </ul>
           <button onClick={() => supabase.auth.signOut()}>Logout</button>
