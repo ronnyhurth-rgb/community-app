@@ -70,7 +70,11 @@ export default function App() {
         </button>
       ) : (
         <div>
-          <h1>Community</h1>
+         
+  <h1>Community</h1>
+  <p>Debug: {allUsers.length} User gefunden.</p>
+  <pre>{JSON.stringify(allUsers, null, 2)}</pre>
+
           <p>Eingeloggt als: {profile.username || "User"}</p>
           <hr />
           <h3>Alle registrierten Profile:</h3>
