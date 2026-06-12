@@ -1,0 +1,17 @@
+# Abhängigkeiten
+node_modules
+/node_modules
+package-lock.json
+
+# Build-Ordner
+dist
+.output
+
+# Umgebungsdateien
+.env
+.env.local
+.env.*.local
+
+# Systemdateien
+.DS_Store
+Thumbs.db
