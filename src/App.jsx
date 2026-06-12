@@ -8,16 +8,14 @@ export default function App() {
 
   const fetchData = async (user) => {
     try {
-      console.log("Starte Datenabruf für:", user.id);
+      setLoading(true);
       
-      // 1. Eigenes Profil abrufen
-      const { data: profileData, error: profileError } = await supabase
+      // 1. Profil abrufen
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
-
-      if (profileError) throw profileError;
       setProfile(profileData);
 
       // 2. Alle User abrufen
@@ -26,26 +24,30 @@ export default function App() {
         .select('*');
 
       if (usersError) throw usersError;
-      
-      console.log("Erfolgreich geladene User:", usersData);
       setAllUsers(usersData || []);
       
     } catch (err) {
-      console.error("FEHLER BEIM DATENLADEN:", err.message);
+      console.error("Fehler:", err.message);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    // Initialen Session-Check
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) fetchData(session.user);
-      else setLoading(false);
+      if (session) {
+        fetchData(session.user);
+      } else {
+        setLoading(false);
+      }
     });
 
+    // Listener für Login/Logout
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) fetchData(session.user);
-      else {
+      if (session) {
+        fetchData(session.user);
+      } else {
         setProfile(null);
         setAllUsers([]);
         setLoading(false);
@@ -69,18 +71,19 @@ export default function App() {
       ) : (
         <div>
           <h1>Community</h1>
-          <p>Debug: {allUsers.length} User gefunden.</p>
-          <div style={{ border: '1px solid #ccc', padding: '10px' }}>
-            {allUsers.length > 0 ? (
-              allUsers.map(u => (
-                <div key={u.id} style={{ padding: '8px', borderBottom: '1px solid #eee' }}>
-                  {u.username || "Kein Name"} (ID: {u.id.substring(0, 5)})
-                </div>
-              ))
-            ) : (
-              <p>Keine User in der Tabelle gefunden.</p>
-            )}
-          </div>
+          <p>Eingeloggt als: {profile.username || "User"}</p>
+          <hr />
+          <h3>Alle registrierten Profile:</h3>
+          {allUsers.length > 0 ? (
+            <ul>
+              {allUsers.map(u => (
+                <li key={u.id}>{u.username || "Kein Name definiert"}</li>
+              ))}
+            </ul>
+          ) : (
+            <p>Noch keine Profile in der Datenbank gefunden.</p>
+          )}
+          <button onClick={() => supabase.auth.signOut()}>Logout</button>
         </div>
       )}
     </div>
