@@ -1,0 +1,14 @@
+# Umgebungsvariablen (Hier sind deine Supabase-Keys sicher!)
+.env
+.env.local
+
+# Der riesige Ordner mit Abhängigkeiten (wird von Vercel selbst erstellt)
+node_modules
+
+# Persönliche VS Code Einstellungen
+.vscode
+
+# Andere unerwünschte Dateien
+dist
+.DS_Store
+*.log
